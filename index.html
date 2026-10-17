@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pneumatic Engine Pressure Calibration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        steam: {
+                            950: '#0c0a09',
+                            900: '#121010',
+                            800: '#1c1817',
+                            700: '#2e2624',
+                        },
+                        brass: {
+                            DEFAULT: '#d4af37',
+                            light: '#f3e5ab',
+                            dark: '#997a15',
+                        },
+                        copper: {
+                            DEFAULT: '#b87333',
+                            light: '#d99b66',
+                            dark: '#7a471c',
+                        },
+                        rust: {
+                            DEFAULT: '#8b3103',
+                            light: '#b8480a',
+                            dark: '#541c00',
+                        },
+                        amber: {
+                            glow: '#ffbf00',
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Share Tech Mono', 'monospace'],
+                        sans: ['Chakra Petch', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #0c0a09;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(184, 115, 51, 0.12) 0%, transparent 80%),
+                radial-gradient(circle at 20% 20%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+                repeating-linear-gradient(0deg, rgba(0,0,0,0.2), rgba(0,0,0,0.2) 1px, transparent 1px, transparent 2px);
+            font-family: 'Chakra Petch', sans-serif;
+            color: #d4af37;
+        }
+
+        .brass-panel {
+            background: linear-gradient(145deg, #1c1817, #121010);
+            border: 2px solid #d4af37;
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.22), inset 0 0 12px rgba(0,0,0,0.85);
+            position: relative;
+        }
+
+        .brass-panel::before {
+            content: '';
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            border: 1px dashed rgba(212, 175, 55, 0.35);
+            pointer-events: none;
+        }
+
+        .copper-panel {
+            background: linear-gradient(145deg, #281d18, #150e0c);
+            border: 2px solid #b87333;
+            box-shadow: 0 0 12px rgba(184, 115, 51, 0.25), inset 0 0 10px rgba(0,0,0,0.85);
+        }
+
+        /* Continuous Glow-in / Glow-out Keyframe Animations */
+        @keyframes glowPulse {
+            0%, 100% {
+                text-shadow: 0 0 4px rgba(212, 175, 55, 0.4), 0 0 8px rgba(212, 175, 55, 0.2);
+                color: #d4af37;
+            }
+            50% {
+                text-shadow: 0 0 12px rgba(255, 191, 0, 0.9), 0 0 22px rgba(255, 191, 0, 0.7);
+                color: #fff3cc;
+            }
+        }
+
+        .animate-glow-text {
+            animation: glowPulse 3s infinite ease-in-out;
+        }
+
+        .glow-text-amber {
+            text-shadow: 0 0 8px rgba(255, 191, 0, 0.8), 0 0 16px rgba(255, 191, 0, 0.5);
+        }
+
+        .glow-text-brass {
+            text-shadow: 0 0 8px rgba(212, 175, 55, 0.8), 0 0 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .steampunk-btn {
+            background: linear-gradient(180deg, #b87333 0%, #7a471c 100%);
+            border: 1px solid #d4af37;
+            color: #f3e5ab;
+            text-shadow: 1px 1px 2px #000;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 0 #541c00, 0 5px 10px rgba(0,0,0,0.5);
+        }
+
+        .steampunk-btn:hover:not(:disabled) {
+            background: linear-gradient(180deg, #d4af37 0%, #997a15 100%);
+            color: #fff;
+            box-shadow: 0 4px 0 #541c00, 0 0 12px rgba(212, 175, 55, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .steampunk-btn:active:not(:disabled) {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #541c00, inset 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .steampunk-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(0.8);
+        }
+
+        .rivet {
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle at 30% 30%, #d4af37, #541c00);
+            border-radius: 50%;
+            border: 1px solid #0c0a09;
+            box-shadow: inset 0 0 2px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.5);
+            position: absolute;
+        }
+
+        @keyframes spinValve {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(1080deg); }
+        }
+
+        .animate-spin-valve {
+            animation: spinValve 2.5s cubic-bezier(0.15, 0.85, 0.35, 1.2) forwards;
+        }
+
+        .gauge-meter {
+            background: radial-gradient(circle, #221814 0%, #0c0a09 100%);
+            border: 2px solid #b87333;
+            box-shadow: inset 0 0 12px #000;
+        }
+
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121010;
+            border-left: 1px solid #2e2624;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #b87333;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #d4af37;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-3 md:p-6 flex flex-col justify-between select-none">
+
+    <header class="max-w-7xl mx-auto w-full mb-6">
+        <div class="brass-panel p-4 rounded-lg flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="rivet top-2 left-2"></div>
+            <div class="rivet top-2 right-2"></div>
+            <div class="rivet bottom-2 left-2"></div>
+            <div class="rivet bottom-2 right-2"></div>
+
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-gear text-4xl text-brass animate-spin" style="animation-duration: 14s;"></i>
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-bold tracking-wider text-brass animate-glow-text uppercase">
+                        Jethaerune Pneumatic Engine Pressure Calibration
+                    </h1>
+                    <p class="text-xs text-copper-light font-mono">STEAMPUNK COG ALLOCATION & VALVE PRESSURE TERMINAL</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4 w-full md:w-auto justify-around md:justify-end">
+                <div class="gauge-meter px-4 py-2 rounded-lg border-brass flex items-center space-x-3 min-w-[140px]">
+                    <i class="fa-solid fa-toolbox text-2xl text-amber-glow"></i>
+                    <div>
+                        <div class="text-[10px] uppercase text-copper-light font-mono">Toolbox Cogs</div>
+                        <div id="toolbox-balance" class="text-2xl font-mono font-bold text-amber-glow glow-text-amber">5</div>
+                    </div>
+                </div>
+
+                <div class="gauge-meter px-4 py-2 rounded-lg border-copper flex items-center space-x-3 min-w-[140px]">
+                    <i class="fa-solid fa-hand-holding text-2xl text-copper-light"></i>
+                    <div>
+                        <div class="text-[10px] uppercase text-copper-light font-mono">Cogs in Hand</div>
+                        <div id="hand-balance" class="text-2xl font-mono font-bold text-copper-light">0</div>
+                    </div>
+                </div>
+
+                <button onclick="confirmExit()" class="p-3 bg-rust-dark border border-rust hover:bg-rust text-brass-light rounded-lg transition" title="Disconnect Terminal">
+                    <i class="fa-solid fa-power-off text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto w-full flex-grow flex flex-col justify-center space-y-6">
+
+        <!-- PHASE 1: Withdrawal Phase -->
+        <section id="phase-withdrawal" class="brass-panel p-6 md:p-8 rounded-xl max-w-2xl mx-auto w-full text-center">
+            <div class="rivet top-2 left-2"></div>
+            <div class="rivet top-2 right-2"></div>
+            <div class="rivet bottom-2 left-2"></div>
+            <div class="rivet bottom-2 right-2"></div>
+
+            <div class="mb-4">
+                <span class="px-3 py-1 bg-rust/40 border border-rust text-amber-glow text-xs font-mono rounded-full uppercase tracking-widest">Phase 1: Extraction</span>
+                <h2 class="text-2xl font-bold text-brass mt-2 uppercase">Withdraw Cogs from Toolbox</h2>
+                <p class="text-sm text-copper-light mt-1">Select how many Steam Cogs to extract into your hand for Engine allocation.</p>
+            </div>
+
+            <div class="my-6 flex items-center justify-center space-x-4">
+                <button onclick="adjustWithdrawal(-1)" class="steampunk-btn w-12 h-12 text-2xl rounded-lg font-bold flex items-center justify-center">-</button>
+                <div class="gauge-meter px-8 py-3 rounded-xl border-2 border-brass">
+                    <span id="withdrawal-amount" class="text-4xl font-mono font-bold text-amber-glow glow-text-amber">1</span>
+                </div>
+                <button onclick="adjustWithdrawal(1)" class="steampunk-btn w-12 h-12 text-2xl rounded-lg font-bold flex items-center justify-center">+</button>
+            </div>
+
+            <div class="flex justify-center gap-3">
+                <button onclick="setWithdrawMax()" class="px-4 py-2 bg-steam-800 border border-copper text-xs font-mono text-copper-light rounded hover:border-brass transition">MAX COGS</button>
+                <button onclick="submitWithdrawal()" class="steampunk-btn px-8 py-3 rounded-lg font-bold uppercase tracking-wider flex items-center space-x-2">
+                    <span>Transfer to Hand</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- PHASE 2: Engine Room Allocation Phase -->
+        <section id="phase-allocation" class="brass-panel p-4 md:p-5 rounded-xl w-full hidden">
+            <div class="rivet top-2 left-2"></div>
+            <div class="rivet top-2 right-2"></div>
+            <div class="rivet bottom-2 left-2"></div>
+            <div class="rivet bottom-2 right-2"></div>
+
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4 pb-3 border-b border-steam-700 gap-2">
+                <div>
+                    <span class="px-3 py-1 bg-rust/40 border border-rust text-amber-glow text-xs font-mono rounded-full uppercase tracking-widest">Phase 2: Allocation</span>
+                    <h2 class="text-xl font-bold text-brass uppercase mt-1">Distribute Cogs Across Engine Rooms</h2>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <button onclick="resetAllocations()" class="px-3 py-1.5 bg-steam-800 border border-rust text-xs font-mono text-copper-light rounded hover:bg-rust-dark transition">
+                        <i class="fa-solid fa-rotate-left mr-1"></i> Reset All
+                    </button>
+                    <button id="activate-valves-btn" onclick="openValveModal()" class="steampunk-btn px-6 py-2 rounded-lg font-bold uppercase text-sm tracking-wider flex items-center space-x-2">
+                        <i class="fa-solid fa-fire text-amber-glow"></i>
+                        <span>Activate Valves!</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Single Row Container for 6 Engine Rooms -->
+            <div class="w-full overflow-x-auto pb-2">
+                <div id="engine-rooms-container" class="grid grid-cols-6 gap-2 min-w-[850px]">
+                    <!-- Rendered dynamically by JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- PHASE 4: Tabular Performance Report / Summary Phase -->
+        <section id="phase-summary" class="brass-panel p-5 rounded-xl w-full hidden">
+            <div class="rivet top-2 left-2"></div>
+            <div class="rivet top-2 right-2"></div>
+            <div class="rivet bottom-2 left-2"></div>
+            <div class="rivet bottom-2 right-2"></div>
+
+            <div class="flex flex-col md:flex-row justify-between items-center mb-4 pb-3 border-b border-steam-700">
+                <div>
+                    <span class="px-3 py-1 bg-rust/40 border border-rust text-amber-glow text-xs font-mono rounded-full uppercase tracking-widest">Phase 4: Summary</span>
+                    <h2 class="text-xl font-bold text-brass uppercase mt-1">Engine Performance Report</h2>
+                </div>
+                <div class="flex items-center space-x-3 mt-2 md:mt-0">
+                    <div class="text-xs font-mono text-copper-light">
+                        Winning Valves: <span id="summary-valve-results" class="text-amber-glow font-bold text-base font-mono">[-, -, -]</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabular Results -->
+            <div class="overflow-x-auto rounded-lg border border-brass/40 bg-steam-950 mb-4">
+                <table class="w-full text-left font-mono text-sm">
+                    <thead class="bg-steam-800 text-brass border-b border-brass/30 uppercase text-xs">
+                        <tr>
+                            <th class="p-3 text-left">Engine Room</th>
+                            <th class="p-3 text-center">Valve Match</th>
+                            <th class="p-3 text-center">Cog Gear Value</th>
+                            <th class="p-3 text-center">Earned Cogs</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-table-body" class="divide-y divide-steam-800">
+                        <!-- Populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Round Breakdown Stat Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6 font-mono text-xs">
+                <div class="bg-steam-900 border border-copper/40 p-3 rounded text-center">
+                    <div class="text-copper-light">Total Spent Cogs</div>
+                    <div id="summary-spent" class="text-lg font-bold text-rust-light mt-1">0</div>
+                </div>
+                <div class="bg-steam-900 border border-copper/40 p-3 rounded text-center">
+                    <div class="text-copper-light">Unplaced Returned</div>
+                    <div id="summary-returned" class="text-lg font-bold text-brass-light mt-1">0</div>
+                </div>
+                <div class="bg-steam-900 border border-copper/40 p-3 rounded text-center">
+                    <div class="text-copper-light">Gross Earnings</div>
+                    <div id="summary-earned" class="text-lg font-bold text-amber-glow mt-1">0</div>
+                </div>
+                <div class="bg-steam-900 border border-copper/40 p-3 rounded text-center">
+                    <div class="text-copper-light">New Toolbox Balance</div>
+                    <div id="summary-net-toolbox" class="text-lg font-bold text-brass glow-text-brass mt-1">0</div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="startNextRound()" class="steampunk-btn px-8 py-3 rounded-lg font-bold uppercase tracking-wider flex items-center space-x-2">
+                    <span>Prepare Next Cycle</span>
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="max-w-7xl mx-auto w-full mt-6">
+        <div class="copper-panel p-4 rounded-xl">
+            <div class="flex items-center justify-between mb-2 pb-1 border-b border-copper/30">
+                <div class="flex items-center space-x-2 text-xs font-mono text-copper-light uppercase tracking-wider">
+                    <i class="fa-solid fa-terminal text-amber-glow"></i>
+                    <span>Engine Operations Log</span>
+                </div>
+                <div class="text-xs font-mono text-brass font-bold uppercase tracking-wider">
+                    Author: Jerson Traifalgar
+                </div>
+                <button onclick="clearLogs()" class="text-[10px] font-mono text-copper-light hover:text-brass transition">Clear Log</button>
+            </div>
+            <div id="event-log" class="h-28 overflow-y-auto font-mono text-xs space-y-1 bg-steam-950 p-2.5 rounded border border-steam-700">
+                <div class="text-copper-light">[SYSTEM INIT] Pneumatic Calibration Terminal online. Toolbox balance initialized with 5 Cogs.</div>
+            </div>
+        </div>
+    </footer>
+
+    <div id="valve-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="brass-panel p-6 md:p-8 rounded-2xl max-w-lg w-full text-center relative border-2 border-brass shadow-2xl">
+            <div class="rivet top-2 left-2"></div>
+            <div class="rivet top-2 right-2"></div>
+            <div class="rivet bottom-2 left-2"></div>
+            <div class="rivet bottom-2 right-2"></div>
+
+            <span class="px-3 py-1 bg-rust/40 border border-rust text-amber-glow text-xs font-mono rounded-full uppercase tracking-widest">Phase 3: Pressure Release</span>
+            <h2 class="text-2xl font-bold text-brass uppercase mt-2 animate-glow-text">Steam Valve Activation</h2>
+            <p class="text-xs text-copper-light mt-1">Releasing pneumatic pressure to spin valves...</p>
+
+            <div class="my-6 flex justify-center items-center">
+                <div id="valve-spinner" class="w-24 h-24 border-8 border-copper rounded-full flex items-center justify-center relative shadow-2xl bg-steam-900">
+                    <i class="fa-solid fa-gear text-5xl text-brass"></i>
+                    <div class="absolute w-2 h-8 bg-rust-light top-2 rounded-full border border-brass"></div>
+                </div>
+            </div>
+
+            <!-- Revealed Valve Labels: Main, Secondary, Auxiliary -->
+            <div id="valve-results-display" class="flex justify-center space-x-3 mb-6 opacity-30 transition-opacity duration-500">
+                <div class="gauge-meter w-24 h-20 rounded-lg border-2 border-brass flex flex-col items-center justify-center px-1">
+                    <span class="text-[10px] font-mono text-amber-glow animate-glow-text uppercase font-bold">MAIN</span>
+                    <span id="valve-val-1" class="text-3xl font-mono font-bold text-amber-glow">?</span>
+                </div>
+                <div class="gauge-meter w-24 h-20 rounded-lg border-2 border-brass flex flex-col items-center justify-center px-1">
+                    <span class="text-[10px] font-mono text-amber-glow animate-glow-text uppercase font-bold">SECONDARY</span>
+                    <span id="valve-val-2" class="text-3xl font-mono font-bold text-amber-glow">?</span>
+                </div>
+                <div class="gauge-meter w-24 h-20 rounded-lg border-2 border-brass flex flex-col items-center justify-center px-1">
+                    <span class="text-[10px] font-mono text-amber-glow animate-glow-text uppercase font-bold">AUXILIARY</span>
+                    <span id="valve-val-3" class="text-3xl font-mono font-bold text-amber-glow">?</span>
+                </div>
+            </div>
+
+            <div id="duplicate-badge" class="mb-5 p-2 bg-rust-dark/90 border border-amber-glow text-amber-glow text-xs font-mono rounded hidden animate-pulse">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> DUPLICATE VALVE MATCH DETECTED! ADDITIONAL 2X MULTIPLIER APPLIED!
+            </div>
+
+            <button id="view-report-btn" onclick="proceedToSummary()" disabled class="steampunk-btn w-full py-3 rounded-lg font-bold uppercase tracking-wider text-sm flex items-center justify-center space-x-2">
+                <span>View Performance Report</span>
+                <i class="fa-solid fa-chart-line"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="brass-panel p-6 rounded-xl max-w-md w-full text-center relative">
+            <h3 id="confirm-title" class="text-xl font-bold text-brass uppercase mb-2">Confirm Action</h3>
+            <p id="confirm-msg" class="text-sm text-copper-light mb-6">Are you sure you wish to exit the terminal?</p>
+            <div class="flex justify-center space-x-4">
+                <button onclick="closeConfirmModal(false)" class="px-5 py-2 bg-steam-800 border border-copper text-copper-light rounded font-mono hover:text-white transition">Cancel</button>
+                <button id="confirm-action-btn" class="steampunk-btn px-6 py-2 rounded font-bold uppercase">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+        <div class="brass-panel p-8 rounded-2xl max-w-md w-full text-center relative border-2 border-rust">
+            <i class="fa-solid fa-skull-crossbones text-5xl text-rust-light mb-3"></i>
+            <h2 class="text-3xl font-bold text-rust-light uppercase tracking-wider mb-2">Pressure Collapse</h2>
+            <p class="text-sm text-copper-light mb-6">Your Toolbox balance has reached 0 Cogs. The Engine matrix has lost operational pressure.</p>
+            <div class="space-y-3">
+                <button onclick="restartGame()" class="steampunk-btn w-full py-3 rounded-lg font-bold uppercase tracking-wider">Restart Terminal (5 Cogs)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ROOM_NAMES = [
+            "Main Engine",
+            "Secondary Engine",
+            "Major Auxi Engine",
+            "Minor Auxi Engine",
+            "Back-up Generator",
+            "Emergency Engine"
+        ];
+
+        let gameState = {
+            toolboxBalance: 5,
+            handBalance: 0,
+            withdrawalAmount: 1,
+            engineRoomAllocations: [0, 0, 0, 0, 0, 0],
+            valveResults: [0, 0, 0],
+            currentPhase: 1 // 1: Withdrawal, 2: Allocation, 3: Valve Modal, 4: Summary
+        };
+
+        let confirmCallback = null;
+
+        window.onload = function() {
+            renderEngineRooms();
+            updateUI();
+        };
+
+        function renderEngineRooms() {
+            const container = document.getElementById('engine-rooms-container');
+            container.innerHTML = '';
+
+            for (let i = 0; i < 6; i++) {
+                const card = document.createElement('div');
+                card.className = "copper-panel p-2.5 rounded-lg flex flex-col justify-between items-center text-center relative min-w-0";
+
+                card.innerHTML = `
+                    <div class="w-full text-center mb-1">
+                        <div class="text-[11px] font-bold animate-glow-text uppercase tracking-tight leading-tight min-h-[28px] flex items-center justify-center">
+                            ${ROOM_NAMES[i]}
+                        </div>
+                    </div>
+                    
+                    <div class="gauge-meter w-full py-1.5 rounded my-1 border border-brass/50">
+                        <span id="room-count-${i}" class="text-lg font-mono font-bold text-amber-glow">0</span>
+                    </div>
+
+                    <div class="flex items-center justify-between w-full gap-1 mt-1">
+                        <button onclick="allocateCog(${i}, -1)" class="steampunk-btn w-7 h-7 text-xs rounded font-bold flex items-center justify-center">-</button>
+                        <button onclick="resetRoomAllocation(${i})" class="bg-steam-800 border border-copper text-[10px] text-copper-light px-1.5 py-1 rounded hover:text-white transition">0</button>
+                        <button onclick="allocateCog(${i}, 1)" class="steampunk-btn w-7 h-7 text-xs rounded font-bold flex items-center justify-center">+</button>
+                    </div>
+                `;
+
+                container.appendChild(card);
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('toolbox-balance').textContent = gameState.toolboxBalance;
+            document.getElementById('hand-balance').textContent = gameState.handBalance;
+            document.getElementById('withdrawal-amount').textContent = gameState.withdrawalAmount;
+
+            for (let i = 0; i < 6; i++) {
+                const countEl = document.getElementById(`room-count-${i}`);
+                if (countEl) countEl.textContent = gameState.engineRoomAllocations[i];
+            }
+
+            document.getElementById('phase-withdrawal').classList.toggle('hidden', gameState.currentPhase !== 1);
+            document.getElementById('phase-allocation').classList.toggle('hidden', gameState.currentPhase !== 2);
+            document.getElementById('phase-summary').classList.toggle('hidden', gameState.currentPhase !== 4);
+
+            const totalAllocated = gameState.engineRoomAllocations.reduce((a, b) => a + b, 0);
+            const activateBtn = document.getElementById('activate-valves-btn');
+            if (activateBtn) {
+                activateBtn.disabled = totalAllocated === 0;
+            }
+        }
+
+        function adjustWithdrawal(delta) {
+            let target = gameState.withdrawalAmount + delta;
+            if (target >= 1 && target <= gameState.toolboxBalance) {
+                gameState.withdrawalAmount = target;
+                updateUI();
+            }
+        }
+
+        function setWithdrawMax() {
+            if (gameState.toolboxBalance > 0) {
+                gameState.withdrawalAmount = gameState.toolboxBalance;
+                updateUI();
+            }
+        }
+
+        function submitWithdrawal() {
+            if (gameState.toolboxBalance < gameState.withdrawalAmount || gameState.withdrawalAmount <= 0) {
+                return;
+            }
+
+            gameState.toolboxBalance -= gameState.withdrawalAmount;
+            gameState.handBalance += gameState.withdrawalAmount;
+            gameState.currentPhase = 2;
+            
+            addLog(`Extracted ${gameState.withdrawalAmount} Cogs into Hand. Remaining Toolbox: ${gameState.toolboxBalance}`, "action");
+            updateUI();
+        }
+
+        function allocateCog(roomIndex, amount) {
+            if (amount > 0) {
+                if (gameState.handBalance >= amount) {
+                    gameState.engineRoomAllocations[roomIndex] += amount;
+                    gameState.handBalance -= amount;
+                }
+            } else if (amount < 0) {
+                const reduceAmt = Math.abs(amount);
+                if (gameState.engineRoomAllocations[roomIndex] >= reduceAmt) {
+                    gameState.engineRoomAllocations[roomIndex] -= reduceAmt;
+                    gameState.handBalance += reduceAmt;
+                }
+            }
+            updateUI();
+        }
+
+        function resetRoomAllocation(roomIndex) {
+            const count = gameState.engineRoomAllocations[roomIndex];
+            if (count > 0) {
+                gameState.handBalance += count;
+                gameState.engineRoomAllocations[roomIndex] = 0;
+                updateUI();
+            }
+        }
+
+        function resetAllocations() {
+            for (let i = 0; i < 6; i++) {
+                resetRoomAllocation(i);
+            }
+        }
+
+        function openValveModal() {
+            gameState.currentPhase = 3;
+            const modal = document.getElementById('valve-modal');
+            const spinner = document.getElementById('valve-spinner');
+            const resultsDisplay = document.getElementById('valve-results-display');
+            const viewBtn = document.getElementById('view-report-btn');
+            const dupBadge = document.getElementById('duplicate-badge');
+
+            modal.classList.remove('hidden');
+            resultsDisplay.classList.add('opacity-30');
+            viewBtn.disabled = true;
+            dupBadge.classList.add('hidden');
+            
+            document.getElementById('valve-val-1').textContent = '?';
+            document.getElementById('valve-val-2').textContent = '?';
+            document.getElementById('valve-val-3').textContent = '?';
+
+            spinner.classList.remove('animate-spin-valve');
+            void spinner.offsetWidth;
+            spinner.classList.add('animate-spin-valve');
+
+            gameState.valveResults = [
+                Math.floor(Math.random() * 6) + 1,
+                Math.floor(Math.random() * 6) + 1,
+                Math.floor(Math.random() * 6) + 1
+            ];
+
+            setTimeout(() => {
+                document.getElementById('valve-val-1').textContent = gameState.valveResults[0];
+                document.getElementById('valve-val-2').textContent = gameState.valveResults[1];
+                document.getElementById('valve-val-3').textContent = gameState.valveResults[2];
+                
+                resultsDisplay.classList.remove('opacity-30');
+                
+                const hasDuplicates = new Set(gameState.valveResults).size < gameState.valveResults.length;
+                if (hasDuplicates) {
+                    dupBadge.classList.remove('hidden');
+                }
+
+                viewBtn.disabled = false;
+            }, 2500);
+        }
+
+        function proceedToSummary() {
+            document.getElementById('valve-modal').classList.add('hidden');
+            gameState.currentPhase = 4;
+            calculateAndRenderSummary();
+            updateUI();
+        }
+
+        function calculateAndRenderSummary() {
+            const tableBody = document.getElementById('summary-table-body');
+            tableBody.innerHTML = '';
+
+            const winningValves = gameState.valveResults;
+            document.getElementById('summary-valve-results').textContent = `[ ${winningValves.join(', ')} ]`;
+
+            const valveCounts = {};
+            winningValves.forEach(val => {
+                valveCounts[val] = (valveCounts[val] || 0) + 1;
+            });
+
+            let totalSpent = gameState.engineRoomAllocations.reduce((a, b) => a + b, 0);
+            let totalUnplaced = gameState.handBalance;
+            let totalEarned = 0;
+
+            const roomDistributionsLog = [];
+
+            for (let i = 0; i < 6; i++) {
+                const roomNum = i + 1;
+                const cogVal = gameState.engineRoomAllocations[i];
+                const isMatch = winningValves.includes(roomNum);
+                const countInValves = valveCounts[roomNum] || 0;
+
+                if (cogVal > 0) {
+                    roomDistributionsLog.push(`${ROOM_NAMES[i]}: ${cogVal}`);
+                }
+
+                let earnedCogs = 0;
+                if (isMatch && cogVal > 0) {
+                    const multiplier = countInValves * 2;
+                    earnedCogs = cogVal * multiplier;
+                }
+                totalEarned += earnedCogs;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-steam-900/60 transition";
+
+                const tdRoom = document.createElement('td');
+                tdRoom.className = "p-3 text-left font-bold text-brass";
+                tdRoom.textContent = ROOM_NAMES[i];
+
+                const tdMatch = document.createElement('td');
+                tdMatch.className = "p-3 text-center text-base";
+                if (isMatch) {
+                    tdMatch.innerHTML = `<span class="text-green-400 font-bold">✓ ${countInValves > 1 ? `<span class="text-xs text-amber-glow">(${countInValves}x)</span>` : ''}</span>`;
+                } else {
+                    tdMatch.innerHTML = `<span class="text-red-500 font-bold">✗</span>`;
+                }
+
+                const tdCogVal = document.createElement('td');
+                tdCogVal.className = "p-3 text-center font-bold text-base";
+                
+                if (cogVal > 0 && isMatch) {
+                    tdCogVal.className += " text-amber-glow glow-text-amber";
+                } else if (cogVal > 0 && !isMatch) {
+                    tdCogVal.className += " text-red-500";
+                } else {
+                    tdCogVal.className += " text-white opacity-60";
+                }
+                tdCogVal.textContent = cogVal;
+
+                const tdEarned = document.createElement('td');
+                tdEarned.className = "p-3 text-center font-bold text-base text-brass";
+                tdEarned.textContent = earnedCogs > 0 ? `+${earnedCogs}` : '0';
+
+                tr.appendChild(tdRoom);
+                tr.appendChild(tdMatch);
+                tr.appendChild(tdCogVal);
+                tr.appendChild(tdEarned);
+
+                tableBody.appendChild(tr);
+            }
+
+            const newToolboxBalance = gameState.toolboxBalance + totalUnplaced + totalEarned;
+
+            document.getElementById('summary-spent').textContent = totalSpent;
+            document.getElementById('summary-returned').textContent = totalUnplaced;
+            document.getElementById('summary-earned').textContent = totalEarned;
+            document.getElementById('summary-net-toolbox').textContent = newToolboxBalance;
+
+            const matchedRooms = [];
+            for (let room = 1; room <= 6; room++) {
+                if (winningValves.includes(room)) {
+                    matchedRooms.push(`${ROOM_NAMES[room - 1]}`);
+                }
+            }
+
+            const netGain = (totalEarned + totalUnplaced) - totalSpent;
+            const gainLossText = netGain >= 0 ? `+${netGain}` : `${netGain}`;
+
+            addLog(`[ROUND REPORT] Placed Cogs: [${roomDistributionsLog.length ? roomDistributionsLog.join(', ') : 'None'}]`, "info");
+            addLog(`Winning Valves: [Main: ${winningValves[0]}, Secondary: ${winningValves[1]}, Auxiliary: ${winningValves[2]}]. Matched: ${matchedRooms.length ? matchedRooms.join(', ') : 'None'}`, "info");
+            addLog(`Spent: ${totalSpent} | Returned: ${totalUnplaced} | Earned: ${totalEarned} | Net Shift: ${gainLossText} | New Toolbox Balance: ${newToolboxBalance}`, "summary");
+
+            gameState.toolboxBalance = newToolboxBalance;
+            gameState.handBalance = 0;
+        }
+
+        function startNextRound() {
+            if (gameState.toolboxBalance <= 0) {
+                document.getElementById('game-over-modal').classList.remove('hidden');
+            } else {
+                gameState.engineRoomAllocations = [0, 0, 0, 0, 0, 0];
+                gameState.withdrawalAmount = Math.min(1, gameState.toolboxBalance);
+                gameState.currentPhase = 1;
+                updateUI();
+                addLog("Initiating new pressure extraction cycle...", "system");
+            }
+        }
+
+        function restartGame() {
+            document.getElementById('game-over-modal').classList.add('hidden');
+            gameState = {
+                toolboxBalance: 5,
+                handBalance: 0,
+                withdrawalAmount: 1,
+                engineRoomAllocations: [0, 0, 0, 0, 0, 0],
+                valveResults: [0, 0, 0],
+                currentPhase: 1
+            };
+            renderEngineRooms();
+            updateUI();
+            addLog("[SYSTEM REBOOT] Terminal reset. 5 Cogs restored to Toolbox.", "system");
+        }
+
+        function addLog(message, type = "info") {
+            const logBox = document.getElementById('event-log');
+            const entry = document.createElement('div');
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            let colorClass = "text-copper-light";
+            if (type === "system") colorClass = "text-brass-light font-bold";
+            if (type === "action") colorClass = "text-copper-light";
+            if (type === "summary") colorClass = "text-amber-glow font-bold";
+
+            entry.className = colorClass;
+            entry.textContent = `[${time}] ${message}`;
+
+            logBox.appendChild(entry);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        function clearLogs() {
+            document.getElementById('event-log').innerHTML = '';
+            addLog("Operation logs cleared.", "system");
+        }
+
+        function confirmExit() {
+            showConfirmModal("Disconnect Terminal", "Are you sure you wish to shut down the terminal and reset pressure?", () => {
+                addLog("Terminal session terminated by operator.", "system");
+                restartGame();
+            });
+        }
+
+        function showConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-msg').textContent = message;
+            confirmCallback = onConfirm;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+
+            document.getElementById('confirm-action-btn').onclick = () => {
+                if (confirmCallback) confirmCallback();
+                closeConfirmModal(true);
+            };
+        }
+
+        function closeConfirmModal(confirmed) {
+            document.getElementById('confirm-modal').classList.add('hidden');
+            confirmCallback = null;
+        }
+    </script>
+</body>
+</html>
